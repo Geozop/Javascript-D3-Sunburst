@@ -48,7 +48,7 @@ var outerarc = d3.arc()
     .cornerRadius(3);
 
 // group for just the pie slices
-var arcgroup = sunburstgroup.append('g').attr('transform', 'translate(' + (widthb / 2) + ', ' + (widthb / 2 + 20) + ')');
+var arcgroup = sunburstgroup.append('g').attr('transform', 'translate(' + (widthb / 2) + ', ' + (widthb / 2) + ')');
 
 // give colors to pie slices based on industry sector or other attributes
 function arccolors(code) {
@@ -177,7 +177,8 @@ d3.select('#sunburststate')
         var type = d3.select(this).property('value');
         if (type == 'All')
         {
-            selectedStates = ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware', 'District of Columbia', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming']
+            selectedStates = ['United States'];
+            //selectedStates = ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware', 'District of Columbia', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming']
         } else if (type == 'CA') {
             selectedStates = ['California'];
         } else if (type == 'TX') {
@@ -190,6 +191,8 @@ d3.select('#sunburststate')
             selectedStates = ['Michigan'];
         } else if (type == 'HI') {
             selectedStates = ['Hawaii'];
+        } else if (type == 'NY') {
+            selectedStates = ['New York'];
         }
         UpdateSunburst();
     });
@@ -228,22 +231,17 @@ var pie = d3.pie().sort(null).value(function(d) {
 
 
 // --- --- --- Begin parse file into heirarchy --- --- ---
-// statedata["Utah"].id3s["311"] is the object of values for industry code "311" from Utah ("Food manufacturing")
-// statedata["Ohio"].id4s["3112"] is the object of values for industry code "3112" from Ohio ("Grain and oilseed milling").
-// statedata["Utah"].subtotal2s["31"] is the totals of the codes that start with "31" (eg, 311 + 312 + 319). NOTE: this will be the root level of the sunburst
+
+
+
+// statedata["Utah"].id3s["311"] is the data object of values for industry code "311" from Utah ("Food manufacturing")
+// statedata["Ohio"].id4s["3112"] is the data object of values for industry code "3112" from Ohio ("Grain and oilseed milling").
 // statedata["Utah"].subtotal3s["311"] is the totals of the codes that start with "311" (eg, 3111 + 3113 + 3114). NOTE: this may not sum to id3s["311"] due to the collection methods
 // NOTE: any of these may be undefined, so use || when accessing. eg: console.log(statedata["Utah"].subtotal3s["311"].prod_ann_w || 0);
 
 var statedata = [];
 
-// keep small differences out of "Unaccounted" value
-function subdatamin(a, b) {
-    var d;
-    if ((d = a - b) > 2)
-        return d;
-    return 0;
-}
-
+// this should be a separate file
 var codelabels = new Object;
 codelabels["31"] = "Agriculture manufacture";
 codelabels["32"] = "Nonmetals manufacture";
@@ -357,6 +355,14 @@ codelabels["3391"] = "Medical equipment and supplies manufacturing";
 codelabels["3399"] = "Other miscellaneous manufacturing";
 codelabels["0"] = "Unaccounted";
 
+// keep small differences out of "Unaccounted" value
+function subdatamin(a, b) {
+    var d;
+    if ((d = a - b) > 2)
+        return d;
+    return 0;
+}
+
 // subtract custom data objects
 function subdataobject(start, diff) {
 
@@ -412,7 +418,7 @@ function getpiearray(depth) {
         {
             for (code in statedata[place].id2s)
             {
-                rets[code] = adddataobject(statedata[place].id2s[code], rets[code]);
+                rets[code] = adddataobject(statedata[place].id2s[code], rets[code]); // in case there is already data in rets[code]
             }
         } else if (depth === 1) {
             for (code in statedata[place].id3s)
@@ -428,14 +434,14 @@ function getpiearray(depth) {
     }
 
     var key, ret = [];
-    for (key in rets)
+    for (key in rets) // assume keys are iterated alphabetically (XXX not always true, depends on browser/version)
     {
-        ret.push(rets[key]);
+        ret.push(rets[key]); // returned array cannot be associative, hence this extra work
     }
     return ret;
 }
 
-// create new index if state wasn't previously added
+// create new index for a state, if that state wasn't previously added
 function addtostates(place, id, data) {
 
     if (place in statedata)
@@ -454,107 +460,12 @@ function addtostates(place, id, data) {
 
 }
 
-// update sunburst when something happens
-function UpdateSunburst() {
-
-    arcgroup.selectAll('path').remove();
-    sunburstlabel2.text("");
-    if (selectedStates.length < 1)
-    {
-        sunburstlabel1.text('[Please select a state]');
-        return;
-    }
-    else
-    {
-        sunburstlabel1.text("");
-    }
-
-    // hack: temparray so that functions can access original data points
-    var temparray = getpiearray(0);
-    arcgroup.selectAll('path.innerpie').data(pie(temparray))
-                .enter().append('path').attr('class', 'innerpie')
-                .attr('d', innerarc)
-                .style('fill', function(d, i) {return arccolors(temparray[i].code);})
-                .style('opacity', .5)
-                .style('stroke', '#202020')
-                .on('mouseover', function(d, i) {
-                    d3.select(this).style('opacity', 1);
-                    sunburstlabel1.text(temparray[i].code + ":" + temparray[i].sector);
-                    sunburstlabel2.text(sunburstdatalabelprefix + d.value.toLocaleString() + sunburstdatalabelsuffix); // are all values in thousands?
-                })
-                .on('mouseout', function(d, i) {
-                    d3.select(this).style('opacity', .5);
-                    sunburstlabel1.text("");
-                    sunburstlabel2.text("");
-                })
-                .each(function(d, i){
-                    d3.select(this)
-                        .append('title').attr('class', 'tooltip' + temparray[i].code)
-                        .text(temparray[i].code + ":" + temparray[i].sector);
-                });
-
-    var temparray2 = getpiearray(1);
-    arcgroup.selectAll('path.middlepie').data(pie(temparray2))
-                .enter().append('path').attr('class', 'middlepie')
-                .attr('d', middlearc)
-                .style('fill', function(d, i) {return arccolors(temparray2[i].code);})
-                .style('opacity', .5)
-                .style('stroke', '#202020')
-                .on('mouseover', function(d, i) {
-                    d3.select(this).style('opacity', 1);
-                    sunburstlabel1.text(temparray2[i].code + ":" + temparray2[i].sector);
-                    sunburstlabel2.text(sunburstdatalabelprefix + d.value.toLocaleString() + sunburstdatalabelsuffix);
-                })
-                .on('mouseout', function(d) {
-                    d3.select(this).style('opacity', .5);
-                    sunburstlabel1.text("");
-                    sunburstlabel2.text("");
-                })
-                .each(function(d, i){
-                    d3.select(this)
-                        .append('title').attr('class', 'tooltip' + temparray2[i].code)
-                        .text(temparray2[i].code + ":" + temparray2[i].sector);
-                });
-
-    var temparray3 = getpiearray(2);
-    arcgroup.selectAll('path.outerpie').data(pie(temparray3))
-                .enter().append('path').attr('class', 'outerpie')
-                .attr('d', outerarc)
-                .style('opacity', .5)
-                .style('stroke', '#202020')
-                .on('mouseover', function(d, i) {
-                    d3.select(this).style('opacity', 1);
-                    sunburstlabel1.text(temparray3[i].code + ":" + temparray3[i].sector);
-                    sunburstlabel2.text(sunburstdatalabelprefix + d.value.toLocaleString() + sunburstdatalabelsuffix);
-                })
-                .on('mouseout', function(d, i) {
-                    d3.select(this).style('opacity', .5);
-                    sunburstlabel1.text("");
-                    sunburstlabel2.text("");
-                })
-                .each(function(d, i){
-                    var self = d3.select(this);
-                    var code = temparray3[i].code;
-                    self.append('title').text(code + ":" + temparray3[i].sector); // tooltip
-                    if (code > 0) // don't show unaccounted blocks
-                        self.attr('class', 'outerpie').style('fill', function(d, i) {return arccolors(code);});
-                    else {
-                        if (hidemissing)
-                            self.attr('display', 'none');
-                        else
-                            self.style('fill', '#FFFFFF');
-                    }
-                });
-}
-
 // read the hierarchy data from the csv and make multidimensional object to hold data
 d3.csv('csvs/2013_data_id.csv', function(data) {
 
     // ignore totals
     data.forEach(function(d, i) {
-        if (d.place === "United States")
-            return;
-        if (d.id === "31-33")
+        if (d.id === "31-33") // ignore total for now
             return;
         addtostates(d.place, d.id, {sector:d.sector, code:d.id, emp:parseFloat(d.emp), ann_pay:parseFloat(d.ann_pay),
                 prod_avg:parseFloat(d.prod_avg), prod_ann_h:parseFloat(d.prod_ann_h), prod_ann_w:parseFloat(d.prod_ann_w), mat_cost:parseFloat(d.mat_cost),
@@ -613,7 +524,7 @@ d3.csv('csvs/2013_data_id.csv', function(data) {
         for (id in toadd[state].id3s)
         {
             shortcode = id.substr(0,2);
-            if (shortcode in statedata[state].id2s) // eg New Mexico did not have any 32XX data, except for 3273
+            if (shortcode in statedata[state].id2s) // Problem: New Mexico did not have any 32XX data, except for 3273
                 statedata[state].id2s[shortcode] = adddataobject(statedata[state].id2s[shortcode], toadd[state].id3s[id]);
             else
                 statedata[state].id2s[shortcode] = adddataobject(toadd[state].id3s[id], undefined); // make a deep copy
@@ -630,4 +541,101 @@ d3.csv('csvs/2013_data_id.csv', function(data) {
     UpdateSunburst();
 });
 
+
+
 // --- --- --- End parse file into heirarchy --- --- ---
+
+
+
+// update sunburst when something happens
+function UpdateSunburst() {
+
+    arcgroup.selectAll('path').remove();
+    sunburstlabel2.text("");
+    if (selectedStates.length < 1)
+    {
+        sunburstlabel1.text('[Please select a state]');
+        return;
+    }
+    else
+    {
+        sunburstlabel1.text("");
+    }
+
+    // hack: temparray so that these functions can access original data points (isn't Javascrpt fun?)
+    var temparray = getpiearray(0);
+    arcgroup.selectAll('path.innerpie').data(pie(temparray))
+                .enter().append('path').attr('class', 'innerpie')
+                .attr('d', innerarc)
+                .style('fill', function(d, i) {return arccolors(temparray[i].code);}) // hack
+                .style('opacity', .5)
+                .style('stroke', '#202020')
+                .on('mouseover', function(d, i) {
+                    d3.select(this).style('opacity', 1);
+                    sunburstlabel1.text(temparray[i].code + ":" + temparray[i].sector); // hack
+                    sunburstlabel2.text(sunburstdatalabelprefix + d.value.toLocaleString() + sunburstdatalabelsuffix); // add punctuation or "thousands"
+                })
+                .on('mouseout', function(d, i) {
+                    d3.select(this).style('opacity', .5);
+                    sunburstlabel1.text("");
+                    sunburstlabel2.text("");
+                })
+                .each(function(d, i){
+                    d3.select(this)
+                        .append('title').attr('class', 'tooltip' + temparray[i].code) // hack
+                        .text(temparray[i].code + ":" + temparray[i].sector);
+                });
+
+    var temparray2 = getpiearray(1);
+    arcgroup.selectAll('path.middlepie').data(pie(temparray2))
+                .enter().append('path').attr('class', 'middlepie')
+                .attr('d', middlearc)
+                .style('fill', function(d, i) {return arccolors(temparray2[i].code);})
+                .style('opacity', .5)
+                .style('stroke', '#202020')
+                .on('mouseover', function(d, i) {
+                    d3.select(this).style('opacity', 1);
+                    sunburstlabel1.text(temparray2[i].code + ":" + temparray2[i].sector);
+                    sunburstlabel2.text(sunburstdatalabelprefix + d.value.toLocaleString() + sunburstdatalabelsuffix);
+                })
+                .on('mouseout', function(d) {
+                    d3.select(this).style('opacity', .5);
+                    sunburstlabel1.text("");
+                    sunburstlabel2.text("");
+                })
+                .each(function(d, i){
+                    d3.select(this)
+                        .append('title').attr('class', 'tooltip' + temparray2[i].code)
+                        .text(temparray2[i].code + ":" + temparray2[i].sector);
+                });
+
+    var temparray3 = getpiearray(2);
+    arcgroup.selectAll('path.outerpie').data(pie(temparray3))
+                .enter().append('path').attr('class', 'outerpie')
+                .attr('d', outerarc)
+                .style('opacity', .5)
+                .style('stroke', '#202020')
+                .on('mouseover', function(d, i) {
+                    d3.select(this).style('opacity', 1);
+                    sunburstlabel1.text(temparray3[i].code + ":" + temparray3[i].sector);
+                    sunburstlabel2.text(sunburstdatalabelprefix + d.value.toLocaleString() + sunburstdatalabelsuffix);
+                })
+                .on('mouseout', function(d, i) {
+                    d3.select(this).style('opacity', .5);
+                    sunburstlabel1.text("");
+                    sunburstlabel2.text("");
+                })
+                .each(function(d, i){
+                    var self = d3.select(this);
+                    var code = temparray3[i].code;
+                    self.append('title').text(code + ":" + temparray3[i].sector); // tooltip
+                    if (code > 0) // don't show unaccounted blocks
+                        self.attr('class', 'outerpie').style('fill', function(d, i) {return arccolors(code);});
+                    else {
+                        if (hidemissing)
+                            self.attr('display', 'none');
+                        else
+                            self.style('fill', '#FFFFFF');
+                    }
+                });
+}
