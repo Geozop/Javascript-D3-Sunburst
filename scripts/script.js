@@ -2,7 +2,7 @@
 /*global selectedStates*/
 console.log("running script.js");
 
-var selectedStates = ["Alaska"];
+var selectedStates = ["New York"];
 
 // window sizes
 var width = window.innerWidth - 20; // extra margin from browser view borders
@@ -72,6 +72,7 @@ function arccolors(code) {
         third = '22';
     }
 
+    // main color based on sector (just chose patterns that looked all right)
     if (code[1] == '3')
         return ('#' + second) + third + 'F0';
     else if (code[1] == '2')
@@ -86,8 +87,8 @@ function arccolors(code) {
 var sunburstlabel1 = sunburstgroup.append('text')
     .attr('class', 'sunburstlabel1')
     .attr('x', widthb / 2).attr('y', 20)
-    .attr('text-anchor', 'middle')
-    .text('[Please select a state]');
+    .attr('text-anchor', 'middle');
+    // .text('[Please select a state]');
 
 var sunburstlabel2 = sunburstgroup.append('text')
     .attr('class', 'sunburstlabel2')
@@ -112,11 +113,11 @@ d3.select('#sunburstbutton1')
 var options = [{value:'emp', text:'Employee count'},{value:'ann_pay', text:'Total Annual Pay'},{value:'prod_avg', text:'Workers'},{value:'prod_ann_h', text:'Workers Annual Hours'},{value:'prod_ann_w', text:'Workers Annual Wages'},{value:'mat_cost', text:'Materials Cost'},{value:'ship_val', text:'Shipment Value'},{value:'val_added', text:'Value Added'},{value:'total_exp', text:'Total Expenditures'}];
 d3.select('#sunburstoption').selectAll('option').data(options).enter().append('option').attr('value', function(d, i){return d.value;}).text(function(d, i){return d.text;});
 
-var stateoptions = [{value:'AL', text:'Alaska'},{value:'CA', text:'California'},{value:'TX', text:'Texas'},{value:'NY', text:'New York'},{value:'FL', text:'Florida'},{value:'HI', text:'Hawaii'},{value:'MI', text:'Michigan'},{value:'All', text:'All States'}];
+var stateoptions = [{value:'NY', text:'New York'},{value:'AL', text:'Alaska'},{value:'CA', text:'California'},{value:'TX', text:'Texas'},{value:'FL', text:'Florida'},{value:'HI', text:'Hawaii'},{value:'MI', text:'Michigan'},{value:'All', text:'All States'}];
 d3.select('#sunburststate').selectAll('option').data(stateoptions).enter().append('option').attr('value', function(d, i){return d.value;}).text(function(d, i){return d.text;});
 
 var sunburstdatalabelprefix = "";
-var sunburstdatalabelsuffix = "";
+var sunburstdatalabelsuffix = " employees";
 
 // add options to "Data type" dropdown
 d3.select('#sunburstoption')
@@ -125,7 +126,7 @@ d3.select('#sunburstoption')
         if (type == 'emp')
         {
             sunburstdatalabelprefix = "";
-            sunburstdatalabelsuffix = "";
+            sunburstdatalabelsuffix = " employees";
         }
         else if (type == 'ann_pay')
         {
@@ -135,12 +136,12 @@ d3.select('#sunburstoption')
         else if (type == 'prod_avg')
         {
             sunburstdatalabelprefix = "";
-            sunburstdatalabelsuffix = "";
+            sunburstdatalabelsuffix = " workers";
         }
         else if (type == 'prod_ann_h')
         {
             sunburstdatalabelprefix = "";
-            sunburstdatalabelsuffix = ",000";
+            sunburstdatalabelsuffix = ",000 hours";
         }
         else if (type == 'prod_ann_w')
         {
@@ -233,12 +234,11 @@ var pie = d3.pie().sort(null).value(function(d) {
 // --- --- --- Begin parse file into heirarchy --- --- ---
 
 
-
+// main multidimensional array
 // statedata["Utah"].id3s["311"] is the data object of values for industry code "311" from Utah ("Food manufacturing")
 // statedata["Ohio"].id4s["3112"] is the data object of values for industry code "3112" from Ohio ("Grain and oilseed milling").
 // statedata["Utah"].subtotal3s["311"] is the totals of the codes that start with "311" (eg, 3111 + 3113 + 3114). NOTE: this may not sum to id3s["311"] due to the collection methods
 // NOTE: any of these may be undefined, so use || when accessing. eg: console.log(statedata["Utah"].subtotal3s["311"].prod_ann_w || 0);
-
 var statedata = [];
 
 // this should be a separate file
@@ -358,7 +358,7 @@ codelabels["0"] = "Unaccounted";
 // keep small differences out of "Unaccounted" value
 function subdatamin(a, b) {
     var d;
-    if ((d = a - b) > 2)
+    if ((d = a - b) > 4)
         return d;
     return 0;
 }
@@ -441,7 +441,7 @@ function getpiearray(depth) {
     return ret;
 }
 
-// create new index for a state, if that state wasn't previously added
+// helper function: create a new index for a state, if that state wasn't previously added, or add a state's datum
 function addtostates(place, id, data) {
 
     if (place in statedata)
@@ -460,22 +460,32 @@ function addtostates(place, id, data) {
 
 }
 
+// does the object still hold any value to display?
+function nonzeroobject(obj) {
+    if (obj.emp != 0 || obj.ann_pay != 0 ||  obj.prod_avg != 0 ||
+            obj.prod_ann_h != 0 ||  obj.prod_ann_w != 0 ||  obj.mat_cost != 0 ||
+            obj.ship_val != 0 ||  obj.val_added != 0 ||  obj.total_exp != 0)
+        return true;
+    return false;
+}
+
 // read the hierarchy data from the csv and make multidimensional object to hold data
 d3.csv('csvs/2013_data_id.csv', function(data) {
 
-    // ignore totals
     data.forEach(function(d, i) {
-        if (d.id === "31-33") // ignore total for now
+        if (d.id === "31-33") // ignore totals from csv. generate dynamically for now
             return;
         addtostates(d.place, d.id, {sector:d.sector, code:d.id, emp:parseFloat(d.emp), ann_pay:parseFloat(d.ann_pay),
                 prod_avg:parseFloat(d.prod_avg), prod_ann_h:parseFloat(d.prod_ann_h), prod_ann_w:parseFloat(d.prod_ann_w), mat_cost:parseFloat(d.mat_cost),
                 ship_val:parseFloat(d.ship_val), val_added:parseFloat(d.val_added), total_exp:parseFloat(d.total_exp)});
     });
 
-    // calc sum of industry subcodes, in order to detect missing dollars
+    // calculate sum of industry subcodes, in order to detect missing values
     var state, id;
     for (state in statedata) {
         var shortcode, subtotal3s = [];
+
+        // make subtotal array
         for (id in statedata[state].id4s)
         {
             shortcode = id.substr(0, 3); // "3112" adds into subtotal3s["311"]
@@ -487,10 +497,14 @@ d3.csv('csvs/2013_data_id.csv', function(data) {
 
         for (id in statedata[state].id3s)
         {
-            // no four digit code ends with zero, so use a zero code to hold the unaccounted dollars
-            statedata[state].id4s[id + "0"] = subdataobject(statedata[state].id3s[id], subtotal3s[id]);
-            shortcode = id.substr(0, 2); // "311" will convert to id2s["31"]
+            // subtotals done, so compare to the file's values and store them to be displayed
+            // no four-digit code ends with zero (in csv), so use a "zero code" to hold the unaccounted values
+            var obj = subdataobject(statedata[state].id3s[id], subtotal3s[id]);
+            if (nonzeroobject(obj))
+                statedata[state].id4s[id + "0"] = obj;
 
+            // make the sunburst's root-level subtotal, now that the middle-level has been summed
+            shortcode = id.substr(0, 2); // "311" will convert to id2s["31"]
             if (shortcode in statedata[state].id2s)
                 statedata[state].id2s[shortcode] = adddataobject(statedata[state].id2s[shortcode], statedata[state].id3s[id]);
             else
@@ -501,16 +515,17 @@ d3.csv('csvs/2013_data_id.csv', function(data) {
         }
     }
 
-    var toadd = [];
+    // there are many 'missing' data points, eg "3141" exists but no "314" data point
+    var toadd = []; // toadd will hold values for each state
     for (state in statedata) {
         for (id in statedata[state].id4s)
         {
             shortcode = id.substr(0, 3);
-            if (!(shortcode in statedata[state].id3s)) // there are many 'missing' data points, eg "3141" exists but no "314" data point
+            if (!(shortcode in statedata[state].id3s)) // is there a corresponding id3 for each id4?
             {
                 if (state in toadd)
                 {
-                    toadd[state].id3s[shortcode] = adddataobject(statedata[state].id4s[id], toadd[state].id3s[shortcode]);
+                    toadd[state].id3s[shortcode] = adddataobject(statedata[state].id4s[id], toadd[state].id3s[shortcode]); // sum values into an id3 code
                 } else {
                     toadd[state] = {id3s:new Array};
                     toadd[state].id3s[shortcode] = adddataobject(statedata[state].id4s[id], undefined); // make a deep copy
@@ -519,18 +534,20 @@ d3.csv('csvs/2013_data_id.csv', function(data) {
         }
     }
 
-    for (state in toadd) // at this point, toadd has the summed values needed to be put into main array
+    // toadd now has the summed, missing values needed to be put into main array
+    for (state in toadd)
     {
         for (id in toadd[state].id3s)
         {
+            // Problem: New Mexico did not have any 32XX data, except for 3273, so check for existing id2 code!
             shortcode = id.substr(0,2);
-            if (shortcode in statedata[state].id2s) // Problem: New Mexico did not have any 32XX data, except for 3273
+            if (shortcode in statedata[state].id2s)
                 statedata[state].id2s[shortcode] = adddataobject(statedata[state].id2s[shortcode], toadd[state].id3s[id]);
             else
                 statedata[state].id2s[shortcode] = adddataobject(toadd[state].id3s[id], undefined); // make a deep copy
 
             statedata[state].id3s[id] = toadd[state].id3s[id];
-            statedata[state].id3s[id].sector = codelabels[id]; // middle-layer pie slice needs a middle-layer name
+            statedata[state].id3s[id].sector = codelabels[id];
             statedata[state].id3s[id].code = id;
 
             statedata[state].id2s[shortcode].sector = codelabels[shortcode];
@@ -546,6 +563,8 @@ d3.csv('csvs/2013_data_id.csv', function(data) {
 // --- --- --- End parse file into heirarchy --- --- ---
 
 
+// detailed below
+var temparray, temparray2, temparray3;
 
 // update sunburst when something happens
 function UpdateSunburst() {
@@ -562,8 +581,8 @@ function UpdateSunburst() {
         sunburstlabel1.text("");
     }
 
-    // hack: temparray so that these functions can access original data points (isn't Javascrpt fun?)
-    var temparray = getpiearray(0);
+    // hack: temparray so that these functions can access original data points when called
+    temparray = getpiearray(0);
     arcgroup.selectAll('path.innerpie').data(pie(temparray))
                 .enter().append('path').attr('class', 'innerpie')
                 .attr('d', innerarc)
@@ -586,7 +605,7 @@ function UpdateSunburst() {
                         .text(temparray[i].code + ":" + temparray[i].sector);
                 });
 
-    var temparray2 = getpiearray(1);
+    temparray2 = getpiearray(1);
     arcgroup.selectAll('path.middlepie').data(pie(temparray2))
                 .enter().append('path').attr('class', 'middlepie')
                 .attr('d', middlearc)
@@ -609,7 +628,7 @@ function UpdateSunburst() {
                         .text(temparray2[i].code + ":" + temparray2[i].sector);
                 });
 
-    var temparray3 = getpiearray(2);
+    temparray3 = getpiearray(2);
     arcgroup.selectAll('path.outerpie').data(pie(temparray3))
                 .enter().append('path').attr('class', 'outerpie')
                 .attr('d', outerarc)
