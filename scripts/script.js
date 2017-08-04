@@ -1,35 +1,91 @@
 /*global d3*/
-/*global selectedStates*/
 console.log("running script.js");
 
-var selectedStates = ["New York"];
-
-// window sizes
+// svg sizes
 var width = 750;
 var height = 750;
 var widthb = 730; // border
 var heightb = 730;
 var hwidth = 375; // half width
 
-// graphic drawing area
+// graphic drawing areas
 var svg = d3.select('#sunburst').append('svg')
+   .attr('preserveAspectRatio', 'xMinYMin meet')
+   .attr('viewBox', '0 0 750 750') // svg sizes should match here
+   .style('width', '50%');
+
+var svgselector = d3.select('#stateselector').append('svg')
    .attr('preserveAspectRatio', 'xMinYMin meet')
    .attr('viewBox', '0 0 750 750')
    .style('width', '50%');
 
-// draw gray background squares (the frame); CSS has style for these
-svg.append('rect').attr('width', width - 1).attr('height', height - 1).attr('fill', 'Gainsboro').attr('rx', 9).attr('ry', 9);
+// draw the main white rectangles; CSS has style for these
 svg.append('rect').attr('transform', 'translate(10, 10)').attr('width', widthb).attr('height', heightb).attr('fill', 'White').attr('rx', 9).attr('ry', 9);
+svgselector.append('rect').attr('transform', 'translate(10, 10)').attr('width', widthb).attr('height', heightb).attr('fill', 'White').attr('rx', 9).attr('ry', 9);
 
-// group to control all sunburst objects, gives a gray "background" border
-var sunburstgroup = svg.append('g').attr('transform', 'translate(0, 18)');
+// offset slightly for drawing thick frame
+//svg.append('rect').attr('transform', 'translate(1, 1)').attr('width', width - 1).attr('height', height - 2).attr('fill', '#002222').attr('rx', 9).attr('ry', 9);
+
+// group to control all sunburst objects
+var sunburstgroup = svg.append('g').attr('transform', 'translate(0, 20)');
+
+// group to control all selector objects
+var selectorgroup = svgselector.append('g').attr('transform', 'translate(30, 30)');
+
+
+// --- --- --- Selector stuff --- --- ---
+
+
+// main array for display to know what is selected
+var selectedStates = [];
+
+// make selector "buttons"
+var possibleStates = ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware', 'District of Columbia', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming', 'All'];
+selectors = selectorgroup.selectAll('.selectorgroup').data(possibleStates).enter();
+
+selectors.append('text').attr('class', 'selectorgroup')
+    .attr('x', function (d, i) {return 180 * (i % 4) + 80;})
+    .attr('y', function (d, i) {return 55 * Math.floor(i / 4) + 20;})
+    .text(function (d, i) {return possibleStates[i];})
+    .style("text-anchor", "middle");
+
+selectors.append('rect').attr('class', 'selectorgroup')
+    .attr('transform', function (d, i) {
+          return 'translate(' + 180 * (i % 4) + ', ' + 55 * Math.floor(i / 4) + ')';
+    })
+    .attr('width', 160).attr('height', 30)
+    .attr('fill', 'Gainsboro')
+    .style('opacity', 0)
+    .on('mouseover', function(d) {
+        var self = d3.select(this);
+        self.style('opacity', 0.5);
+    })
+    .on('mouseout', function(d, i) {
+        if (selectedStates.indexOf(possibleStates[i]) > -1)
+            return;
+        var self = d3.select(this);
+        self.style('opacity', 0);
+    })
+    .on('click', function(d, i) {
+        var index = selectedStates.indexOf(possibleStates[i]);
+        if (index > -1) {
+            d3.select(this).attr('fill', 'Gainsboro');
+            selectedStates.splice(index, 1);
+            UpdateSunburst();
+        } else {
+            d3.select(this).attr('fill', 'Teal');
+            selectedStates.push(possibleStates[i]);
+            UpdateSunburst();
+        }
+    });
+
 
 
 
 // --- --- --- Sunburst stuff --- --- ---
 
 
-//
+
 var radius = hwidth * 0.9;
 
 var innerarc = d3.arc()
@@ -88,7 +144,6 @@ var sunburstlabel1 = sunburstgroup.append('text')
     .attr('class', 'sunburstlabel1')
     .attr('x', width / 2).attr('y', 10)
     .attr('text-anchor', 'middle');
-    // .text('[Please select a state]');
 
 var sunburstlabel2 = sunburstgroup.append('text')
     .attr('class', 'sunburstlabel2')
@@ -112,9 +167,6 @@ d3.select('#sunburstbutton1')
 
 var options = [{value:'emp', text:'Employee count'},{value:'ann_pay', text:'Total Annual Pay'},{value:'prod_avg', text:'Workers'},{value:'prod_ann_h', text:'Workers Annual Hours'},{value:'prod_ann_w', text:'Workers Annual Wages'},{value:'mat_cost', text:'Materials Cost'},{value:'ship_val', text:'Shipment Value'},{value:'val_added', text:'Value Added'},{value:'total_exp', text:'Total Expenditures'}];
 d3.select('#sunburstoption').selectAll('option').data(options).enter().append('option').attr('value', function(d, i){return d.value;}).text(function(d, i){return d.text;});
-
-var stateoptions = [{value:'NY', text:'New York'},{value:'AL', text:'Alaska'},{value:'CA', text:'California'},{value:'TX', text:'Texas'},{value:'FL', text:'Florida'},{value:'HI', text:'Hawaii'},{value:'MI', text:'Michigan'},{value:'All', text:'All States'}];
-d3.select('#sunburststate').selectAll('option').data(stateoptions).enter().append('option').attr('value', function(d, i){return d.value;}).text(function(d, i){return d.text;});
 
 var sunburstdatalabelprefix = "";
 var sunburstdatalabelsuffix = " employees";
@@ -169,32 +221,6 @@ d3.select('#sunburstoption')
             sunburstdatalabelsuffix = ",000";
         }
 
-        UpdateSunburst();
-    });
-
-// add options to "State" dropdown
-d3.select('#sunburststate')
-    .on('change', function(d, i) {
-        var type = d3.select(this).property('value');
-        if (type == 'All')
-        {
-            selectedStates = ['United States'];
-            //selectedStates = ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware', 'District of Columbia', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming']
-        } else if (type == 'CA') {
-            selectedStates = ['California'];
-        } else if (type == 'TX') {
-            selectedStates = ['Texas'];
-        } else if (type == 'FL') {
-            selectedStates = ['Florida'];
-        } else if (type == 'AL') {
-            selectedStates = ['Alaska'];
-        } else if (type == 'MI') {
-            selectedStates = ['Michigan'];
-        } else if (type == 'HI') {
-            selectedStates = ['Hawaii'];
-        } else if (type == 'NY') {
-            selectedStates = ['New York'];
-        }
         UpdateSunburst();
     });
 
@@ -565,8 +591,6 @@ d3.csv('csvs/2013_data_id.csv', function(data) {
 
 // detailed below
 var temparray, temparray2, temparray3;
-
-window.addEventListener("resize", UpdateSunburst);
 
 // update sunburst when something happens
 function UpdateSunburst() {
