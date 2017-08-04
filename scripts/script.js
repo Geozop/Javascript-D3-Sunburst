@@ -5,32 +5,32 @@ console.log("running script.js");
 var selectedStates = ["New York"];
 
 // window sizes
-var width = window.innerWidth - 20; // extra margin from browser view borders
-height = Math.min(width, window.innerHeight + 350)
-
-// vis sizes, calculated with borders
-var widthb = width / 2 - 20;
-var heightb = height / 2 - 20;
+var width = 750;
+var height = 750;
+var widthb = 730; // border
+var heightb = 730;
+var hwidth = 375; // half width
 
 // graphic drawing area
-var svg = d3.select('#sunburst').append('svg').attr('width', width / 2).attr('height', height / 2);
+var svg = d3.select('#sunburst').append('svg')
+   .attr('preserveAspectRatio', 'xMinYMin meet')
+   .attr('viewBox', '0 0 750 750')
+   .style('width', '50%');
 
-// draw gray background
-svg.append('rect').attr('width', width).attr('height', height).attr('fill', 'Gainsboro');
+// draw gray background squares (the frame); CSS has style for these
+svg.append('rect').attr('width', width - 1).attr('height', height - 1).attr('fill', 'Gainsboro').attr('rx', 9).attr('ry', 9);
+svg.append('rect').attr('transform', 'translate(10, 10)').attr('width', widthb).attr('height', heightb).attr('fill', 'White').attr('rx', 9).attr('ry', 9);
 
 // group to control all sunburst objects, gives a gray "background" border
-var sunburstgroup = svg.append('g').attr('transform', 'translate(10, 10)');
-
-// initial white square
-sunburstgroup.append('rect').attr('width', widthb).attr('height', heightb).attr('fill', 'White');
+var sunburstgroup = svg.append('g').attr('transform', 'translate(0, 18)');
 
 
 
 // --- --- --- Sunburst stuff --- --- ---
 
 
-
-var radius = heightb / 2 - 30; // some room for text (however, font size is not well-controlled)
+//
+var radius = hwidth * 0.9;
 
 var innerarc = d3.arc()
     .outerRadius(radius / 3)
@@ -48,7 +48,7 @@ var outerarc = d3.arc()
     .cornerRadius(3);
 
 // group for just the pie slices
-var arcgroup = sunburstgroup.append('g').attr('transform', 'translate(' + (widthb / 2) + ', ' + (widthb / 2) + ')');
+var arcgroup = sunburstgroup.append('g').attr('transform', 'translate(' + hwidth + ', ' + hwidth + ')');
 
 // give colors to pie slices based on industry sector or other attributes
 function arccolors(code) {
@@ -86,13 +86,13 @@ function arccolors(code) {
 
 var sunburstlabel1 = sunburstgroup.append('text')
     .attr('class', 'sunburstlabel1')
-    .attr('x', widthb / 2).attr('y', 20)
+    .attr('x', width / 2).attr('y', 10)
     .attr('text-anchor', 'middle');
     // .text('[Please select a state]');
 
 var sunburstlabel2 = sunburstgroup.append('text')
     .attr('class', 'sunburstlabel2')
-    .attr('x', widthb / 2).attr('y', 40)
+    .attr('x', width / 2).attr('y', 30)
     .attr('text-anchor', 'middle');
 
 var hidemissing = false;
@@ -565,6 +565,8 @@ d3.csv('csvs/2013_data_id.csv', function(data) {
 
 // detailed below
 var temparray, temparray2, temparray3;
+
+window.addEventListener("resize", UpdateSunburst);
 
 // update sunburst when something happens
 function UpdateSunburst() {
