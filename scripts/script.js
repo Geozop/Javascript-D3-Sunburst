@@ -40,15 +40,25 @@ var selectorgroup = svgselector.append('g').attr('transform', 'translate(30, 30)
 var selectedStates = [];
 
 // make selector "buttons"
-var possibleStates = ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware', 'District of Columbia', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming', 'All'];
+var possibleStates = ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware', 'District of Columbia', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'];
 selectors = selectorgroup.selectAll('.selectorgroup').data(possibleStates).enter();
 
+// numbers here based on appearance
 selectors.append('text').attr('class', 'selectorgroup')
     .attr('x', function (d, i) {return 180 * (i % 4) + 80;})
     .attr('y', function (d, i) {return 55 * Math.floor(i / 4) + 20;})
     .text(function (d, i) {return possibleStates[i];})
-    .style("text-anchor", "middle");
+    .style('text-anchor', 'middle');
 
+
+// 'All' used to be "51st" state
+var allselector = selectorgroup.append('text')
+    .attr('x', 620)
+    .attr('y', 680)
+    .text('All')
+    .style('text-anchor', 'middle');
+
+// code for rectangles around selector labels
 selectors.append('rect').attr('class', 'selectorgroup')
     .attr('transform', function (d, i) {
           return 'translate(' + 180 * (i % 4) + ', ' + 55 * Math.floor(i / 4) + ')';
@@ -61,7 +71,7 @@ selectors.append('rect').attr('class', 'selectorgroup')
         self.style('opacity', 0.5);
     })
     .on('mouseout', function(d, i) {
-        if (selectedStates.indexOf(possibleStates[i]) > -1)
+        if (selectedStates.indexOf(possibleStates[i]) > -1) // is it current selected?
             return;
         var self = d3.select(this);
         self.style('opacity', 0);
@@ -77,6 +87,32 @@ selectors.append('rect').attr('class', 'selectorgroup')
             selectedStates.push(possibleStates[i]);
             UpdateSunburst();
         }
+    });
+
+// special code for the "All" button
+selectorgroup.append('rect').attr('class', 'allselector')
+    .attr('transform', 'translate(540, 660)')
+    .attr('width', 160).attr('height', 30)
+    .attr('fill', 'Gainsboro')
+    .style('opacity', 0)
+    .on('mouseover', function() {
+        d3.select(this).style('opacity', 0.5);
+    })
+    .on('mouseout', function() {
+        d3.select(this).style('opacity', 0);
+    })
+    .on('click', function() {
+        var self = d3.select(this);
+        if (allselector.text() == 'All') {
+            allselector.text('None');
+            selectorgroup.selectAll('rect.selectorgroup').attr('fill', 'Teal').style('opacity', 0.5);
+            selectedStates = ['Alabama', 'Alaska', 'Arizona', 'Arkansas', 'California', 'Colorado', 'Connecticut', 'Delaware', 'District of Columbia', 'Florida', 'Georgia', 'Hawaii', 'Idaho', 'Illinois', 'Indiana', 'Iowa', 'Kansas', 'Kentucky', 'Louisiana', 'Maine', 'Maryland', 'Massachusetts', 'Michigan', 'Minnesota', 'Mississippi', 'Missouri', 'Montana', 'Nebraska', 'Nevada', 'New Hampshire', 'New Jersey', 'New Mexico', 'New York', 'North Carolina', 'North Dakota', 'Ohio', 'Oklahoma', 'Oregon', 'Pennsylvania', 'Rhode Island', 'South Carolina', 'South Dakota', 'Tennessee', 'Texas', 'Utah', 'Vermont', 'Virginia', 'Washington', 'West Virginia', 'Wisconsin', 'Wyoming'];
+        } else {
+            allselector.text('All');
+            selectorgroup.selectAll('rect.selectorgroup').attr('fill', 'Gainsboro').style('opacity', 0);
+            selectedStates = [];
+        }
+        UpdateSunburst();
     });
 
 
